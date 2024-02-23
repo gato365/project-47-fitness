@@ -28,7 +28,6 @@ cardio_by_week_df <- cardio_df %>%
   )
 ```
 
-
 ```{r}
 
 
@@ -55,4 +54,3 @@ cardio_by_week_df %>%
 
 
 ```
-
