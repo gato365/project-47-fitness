@@ -1,0 +1,13 @@
+name: fitness-app
+title: fitness-app
+username: gato365
+account: gato365
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 11309609
+bundleId:
+url: https://gato365.shinyapps.io/fitness-app/
+version: 1
+asMultiple: FALSE
+asStatic: FALSE
+ignoredFiles: analysis_cardio.qmd|analysis_workout.qmd

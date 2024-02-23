@@ -43,7 +43,7 @@ ui <- fluidPage(
                     label = "Choose cardio type:",
                     choices = c("Spinning", "Stairs", "Running"),
                     selected = "Spinning"
-                    )
+        )
       )
     ),
     
@@ -76,7 +76,11 @@ server <- function(input, output) {
         theme(
           plot.title = element_text(hjust = 0.5, size = 15, face = 'bold'),
           axis.text.x = element_text(angle = 45, hjust = 1),
-          legend.title = element_blank()
+          legend.title = element_blank(),
+          plot.background = element_rect(fill = "#f0f0f0", color = NA), # Light grey background for the plot area
+          panel.background = element_rect(fill = "#d9d9d9", color = NA), # Slightly darker grey for the panel
+          legend.background = element_rect(fill = "#f0f0f0", color = NA), # Matching the plot background for the legend
+          legend.key = element_rect(fill = "#d9d9d9", color = NA) # Matching the panel background for legend keys
         ) +
         scale_size_manual(values = c("Three Weeks Ago" = 0.75, "Two Weeks Ago" = 1.25, "Previous Week" = 1.75, "Current Week" = 2.25)) +  # Adjust sizes here
         scale_color_manual(values = c(
@@ -86,10 +90,31 @@ server <- function(input, output) {
           "Current Week" = "#E6550D"      # Dark orange
         ))
     } else if (input$activityType == "Workout") {
-      # Insert your ggplot code for Workout here
-      # Use input$bpmType to select between Avg_BPM and Max_BPM
-      ggplot() + 
-        geom_bar()  # Example, replace with your actual plot code
+      # Plotting with days of the week on the x-axis and ensuring logical order in the legend
+      ggplot(summarize_wo_df, aes(x = DayOfWeek, y = sum_pwr, group = Week, color = Week)) +
+        geom_line(aes(size = Week)) +  # Use size to emphasize recency
+        geom_point(aes(size = Week)) + # Use size to emphasize recency
+        labs(x = 'Day of the Week', y = 'Power Exerted', title = 'Power Exerted Per Day Across Weeks') +
+        theme_bw() +
+        theme(
+          plot.title = element_text(hjust = 0.5, size = 15, face = 'bold'),
+          axis.text.x = element_text(angle = 45, hjust = 1),
+          legend.title = element_blank(),
+          plot.background = element_rect(fill = "#e6f5d0", color = NA), # Light green background for the plot area
+          panel.background = element_rect(fill = "#c7e9c0", color = NA), # Slightly darker green for the panel
+          legend.background = element_rect(fill = "#e6f5d0", color = NA), # Matching the plot background for the legend
+          legend.key = element_rect(fill = "#c7e9c0", color = NA) # Matching the panel background for legend keys
+        ) +
+        # scale_x_discrete(limits = c("Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday")) + # Show all days
+        scale_size_manual(values = c("Three Weeks Ago" = 0.5, "Two Weeks Ago" = 1, "Previous Week" = 1.5, "Current Week" = 2)) +  # Adjust sizes here
+        scale_color_manual(values = c(
+          "Three Weeks Ago" = "#9ECAE1",  # Light blue
+          "Two Weeks Ago" = "#6BAED6",    # Medium blue
+          "Previous Week" = "#FD8D3C",    # Orange
+          "Current Week" = "#E6550D"      # Dark orange
+        ))
+      
+      
     }
   })
 }

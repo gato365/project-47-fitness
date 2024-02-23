@@ -50,6 +50,12 @@ power_day_df = power_by_ex_df %>%
   summarise(num_of_ex = n(),sum_pwr = as.numeric(sum(pwr_ex)))
 
 
+summarize_wo_df$Week <- forcats::fct_relevel(summarize_wo_df$Week, 
+                                             
+                                             "Three Weeks Ago",
+                                             "Two Weeks Ago",
+                                             "Previous Week",
+                                             "Current Week")
 
 
 # Assuming power_day_df is your dataframe and it has columns for Date and sum_pwr.
