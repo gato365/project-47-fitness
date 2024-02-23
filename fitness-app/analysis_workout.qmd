@@ -1,0 +1,160 @@
+---
+title: "Untitled"
+format: html
+editor: visual
+---
+
+```{r setup}
+library(tidyverse)
+library(lubridate)
+library(readxl)
+```
+
+```{r}
+##-------------------------------------------
+## Name: calculatePower
+## Purpose: Calculate Power when lifting weights
+## Input: Weight as a vector
+## Output: Power Exerted for an exercise
+## Notes: NA
+##-------------------------------------------
+
+calculatePower = function(weight_rep_vec) {
+  tmp_vec_df = data.frame(tmp_col = weight_rep_vec)
+  
+  
+  pwr_vec = separate(data = tmp_vec_df,
+                     col = tmp_col,
+                     into = c('weight','reps'),
+                     sep = '-') %>%  ## separate weight and rep
+    mutate(weight = as.numeric(str_trim(weight)),
+           reps = as.numeric(str_trim(reps)),
+           power_wt_r = weight*reps ) %>%  ## calculate power
+    pull(power_wt_r)
+  
+  return(pwr_vec)
+  
+}
+```
+
+```{r}
+
+
+suppressWarnings({wo_df = read_xlsx('fitness-data.xlsx', sheet = 'workout',col_types = NULL) %>% 
+  mutate(Date = as.Date(Date),
+         month = month(Date, label = TRUE, abbr = TRUE),
+         year = year(Date)) 
+})
+
+```
+
+```{r}
+## Find Power per exercise
+power_by_ex_df = wo_df %>% 
+  filter(is_power == 1,`completion of workout` == "Yes") %>% 
+  mutate_at(vars(contains("set")), ~ calculatePower(.)) %>% 
+  mutate(pwr_ex = rowSums(select(., starts_with("set") ),na.rm = TRUE ))
+
+## Find Power per day
+power_day_df = power_by_ex_df %>% 
+  group_by(Date) %>% 
+  summarise(num_of_ex = n(),sum_pwr = as.numeric(sum(pwr_ex)))
+```
+
+```{r}
+power_day_df %>% 
+  filter(Date>= (firstDay-7) & Date<=lastDay)  %>%
+  mutate(week_num = week(Date),
+         week_title = case_when(
+           week_num < max(week_num) ~ "Previous Week",
+           week_num == max(week_num) ~ "Current Week",
+         ),
+         day_of_week = paste0("Day ", wday(Date))) %>% 
+  ggplot(aes(x = day_of_week, y = sum_pwr, group = week_title, fill = week_title)) +
+  labs(x = 'Date', y = 'Power', title = 'Power exerted per Day') +
+  # geom_point(color = 'red',size = 2) +
+  # geom_line(size = 1.25) +
+  geom_bar(stat = "identity",position = position_dodge(preserve = 'single')) +
+  theme_bw() +
+  scale_fill_manual(values = c("darkred", "steelblue")) +
+  theme(plot.title = element_text(hjust = 0.5,size = 15, face = 'bold'))
+```
+
+```{r}
+
+
+# Assuming power_day_df has columns Date and sum_pwr
+
+power_day_df %>%
+  filter(Date >= (Sys.Date() - 30)) %>%
+  group_by(Date) %>%
+  summarise(sum_pwr = sum(sum_pwr)) %>%
+  ggplot(aes(x = Date, y = sum_pwr)) +
+  geom_point(color = 'red', size = 2) +
+  geom_line(aes(group = 1), color = 'steelblue', size = 1.25) +
+  labs(x = 'Date', y = 'Power', title = 'Power Exerted Per Day') +
+  theme_bw() +
+  theme(plot.title = element_text(hjust = 0.5, size = 15, face = 'bold')) +
+  scale_x_date(date_labels = "%d-%b", date_breaks = "1 day") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+```
+
+```{r}
+
+
+# Assuming power_day_df is your dataframe and it has columns for Date and sum_pwr.
+summarize_wo_df <- power_day_df %>%
+  filter(Date >= (Sys.Date() - 30)) %>%
+  mutate(
+    Week = case_when(
+      Date >= lubridate::floor_date(Sys.Date(), "week") ~ "Current Week",
+      Date < lubridate::floor_date(Sys.Date(), "week") & Date >= lubridate::floor_date(Sys.Date() - 7, "week") ~ "Previous Week",
+      Date < lubridate::floor_date(Sys.Date() - 7, "week") & Date >= lubridate::floor_date(Sys.Date() - 14, "week") ~ "Two Weeks Ago",
+      TRUE ~ "Three Weeks Ago"
+    ),
+    DayOfWeek = wday(Date, label = TRUE, abbr = FALSE)  # Using full names for days
+  ) %>%
+  group_by(Week, DayOfWeek) %>%
+  summarise(sum_pwr = sum(sum_pwr, na.rm = TRUE)) %>%
+  mutate(DayOfWeek = factor(DayOfWeek, levels = c("Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"))) %>%
+  ungroup()
+
+# Ensure logical order in legend by converting Week to a factor with levels ordered according to recency
+library(forcats)
+
+summarize_wo_df$Week <- forcats::fct_relevel(summarize_wo_df$Week, 
+                                              
+                                                "Three Weeks Ago",
+                                                "Two Weeks Ago",
+                                                "Previous Week",
+                                                "Current Week")
+
+
+# Plotting with days of the week on the x-axis and ensuring logical order in the legend
+ggplot(summarize_wo_df, aes(x = DayOfWeek, y = sum_pwr, group = Week, color = Week)) +
+  geom_line(aes(size = Week)) +  # Use size to emphasize recency
+  geom_point(aes(size = Week)) + # Use size to emphasize recency
+  labs(x = 'Day of the Week', y = 'Power Exerted', title = 'Power Exerted Per Day Across Weeks') +
+  theme_bw() +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 15, face = 'bold'),
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    legend.title = element_blank()
+  ) +
+    # scale_x_discrete(limits = c("Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday")) + # Show all days
+   scale_size_manual(values = c("Three Weeks Ago" = 0.5, "Two Weeks Ago" = 1, "Previous Week" = 1.5, "Current Week" = 2)) +  # Adjust sizes here
+ scale_color_manual(values = c(
+  "Three Weeks Ago" = "#9ECAE1",  # Light blue
+  "Two Weeks Ago" = "#6BAED6",    # Medium blue
+  "Previous Week" = "#FD8D3C",    # Orange
+  "Current Week" = "#E6550D"      # Dark orange
+))
+
+
+
+
+```
+
+
+```

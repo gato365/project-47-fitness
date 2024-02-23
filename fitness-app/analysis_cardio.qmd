@@ -1,0 +1,58 @@
+---
+title: "Untitled"
+format: html
+editor: visual
+---
+
+```{r setup}
+library(tidyverse)
+library(lubridate)
+library(readxl)
+```
+
+```{r}
+cardio_df = read_xlsx('fitness-data.xlsx', sheet = 'cardio',col_types = NULL) 
+```
+
+```{r}
+cardio_by_week_df <- cardio_df %>% 
+  filter(Date >= (Sys.Date() - 30)) %>%
+  mutate(
+    Week = case_when(
+      Date >= lubridate::floor_date(Sys.Date(), "week") ~ "Current Week",
+      Date < lubridate::floor_date(Sys.Date(), "week") & Date >= lubridate::floor_date(Sys.Date() - 7, "week") ~ "Previous Week",
+      Date < lubridate::floor_date(Sys.Date() - 7, "week") & Date >= lubridate::floor_date(Sys.Date() - 14, "week") ~ "Two Weeks Ago",
+      TRUE ~ "Three Weeks Ago"
+    ),
+    DayOfWeek = wday(Date, label = TRUE, abbr = FALSE) 
+  )
+```
+
+
+```{r}
+
+
+cardio_by_week_df %>% 
+  filter(Type == "Stairs") %>% 
+  ggplot( aes(x = DayOfWeek, y = Avg_BPM, color = Week, group = Week)) +
+  geom_point() +
+  geom_line(aes(group = Week)) +  # This groups the line by Type, remove if not needed
+  labs(x = "Time (Minutes)", y = "Average BPM", title = "Time vs Avg BPM by Type") +
+  theme_minimal() +
+   # Adjust color palette as needed
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 15, face = 'bold'),
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    legend.title = element_blank()
+  ) +
+  scale_size_manual(values = c("Three Weeks Ago" = 0.75, "Two Weeks Ago" = 1.25, "Previous Week" = 1.75, "Current Week" = 2.25)) +  # Adjust sizes here
+  scale_color_manual(values = c(
+    "Three Weeks Ago" = "#9ECAE1",  # Light blue
+    "Two Weeks Ago" = "#6BAED6",    # Medium blue
+    "Previous Week" = "#FD8D3C",    # Orange
+    "Current Week" = "#E6550D"      # Dark orange
+  ))
+
+
+```
+
